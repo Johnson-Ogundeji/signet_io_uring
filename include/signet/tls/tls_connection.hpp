@@ -13,6 +13,7 @@
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 
+#include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <functional>

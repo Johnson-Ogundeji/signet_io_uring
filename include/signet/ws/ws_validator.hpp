@@ -24,7 +24,9 @@
 #include "signet/core/error.hpp"
 
 #include <atomic>
+#include <cstddef>
 #include <span>
+#include <string>
 #include <string_view>
 
 namespace signet {

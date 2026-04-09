@@ -16,11 +16,13 @@
 #include "signet/ws/ws_types.hpp"
 #include "signet/core/metrics.hpp"
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
 #include <limits>
 #include <span>
+#include <string_view>
 #include <vector>
 
 namespace signet {

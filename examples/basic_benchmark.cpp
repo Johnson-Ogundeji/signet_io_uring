@@ -65,7 +65,7 @@ public:
 
     void run() override {
         ring_->prep_nop(nullptr);
-        ring_->submit();
+        (void)ring_->submit();
         auto cqe = ring_->wait_cqe(1000);
         if (cqe) {
             ring_->seen_cqe(*cqe);

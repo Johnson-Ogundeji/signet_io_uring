@@ -11,12 +11,14 @@
 #include <liburing.h>
 
 #include <atomic>
+#include <cstddef>
 #include <cstdint>
 #include <cstring>
 #include <functional>
 #include <limits>
 #include <memory>
 #include <span>
+#include <vector>
 
 namespace signet {
 

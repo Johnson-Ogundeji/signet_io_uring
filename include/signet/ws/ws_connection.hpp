@@ -22,10 +22,13 @@
 #include "signet/core/error.hpp"
 #include "signet/core/metrics.hpp"
 
+#include <cstddef>
 #include <deque>
 #include <functional>
 #include <optional>
+#include <span>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace signet {

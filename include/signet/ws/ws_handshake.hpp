@@ -21,9 +21,11 @@
 #include <algorithm>
 #include <array>
 #include <charconv>
+#include <cstddef>
 #include <cstring>
 #include <optional>
 #include <random>
+#include <span>
 #include <string>
 #include <string_view>
 #include <unordered_map>
