@@ -111,10 +111,6 @@ public:
     /// @return true if SQE was acquired
     bool prep_send(int fd, std::span<const std::byte> buffer, int flags, void* user_data);
 
-    /// Prepare a multishot recv operation (kernel 5.19+)
-    /// @return true if SQE was acquired
-    bool prep_recv_multishot(int fd, void* user_data);
-
     /// Prepare a connect operation
     /// @return true if SQE was acquired
     bool prep_connect(int fd, const struct sockaddr* addr, socklen_t addrlen, void* user_data);
@@ -448,15 +444,6 @@ inline bool Ring::prep_send(int fd, std::span<const std::byte> buffer, int flags
     if (!sqe) return false;
 
     io_uring_prep_send(sqe, fd, buffer.data(), buffer.size(), flags);
-    io_uring_sqe_set_data(sqe, user_data);
-    return true;
-}
-
-inline bool Ring::prep_recv_multishot(int fd, void* user_data) {
-    auto sqe = get_sqe();
-    if (!sqe) return false;
-
-    io_uring_prep_recv_multishot(sqe, fd, nullptr, 0, 0);
     io_uring_sqe_set_data(sqe, user_data);
     return true;
 }

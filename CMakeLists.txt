@@ -42,6 +42,11 @@ if(NOT TL_EXPECTED_INCLUDE_DIR)
         GIT_REPOSITORY https://github.com/TartanLlama/expected.git
         GIT_TAG v1.1.0
     )
+    # Don't build tl_expected's own test suite — it carries warnings
+    # that fail under our -Werror sanity build, and we only consume
+    # the headers anyway.
+    set(EXPECTED_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+    set(EXPECTED_BUILD_PACKAGE OFF CACHE BOOL "" FORCE)
     FetchContent_MakeAvailable(tl_expected)
     set(TL_EXPECTED_INCLUDE_DIR ${tl_expected_SOURCE_DIR}/include)
 endif()
