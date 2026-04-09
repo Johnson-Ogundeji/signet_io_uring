@@ -1,0 +1,96 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    name: ${{ matrix.compiler }} / ${{ matrix.build_type }}
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [gcc, clang]
+        build_type: [Debug, Release]
+        include:
+          - compiler: gcc
+            cc: gcc-11
+            cxx: g++-11
+          - compiler: clang
+            cc: clang-14
+            cxx: clang++-14
+
+    env:
+      CC: ${{ matrix.cc }}
+      CXX: ${{ matrix.cxx }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            ninja-build \
+            cmake \
+            pkg-config \
+            liburing-dev \
+            libssl-dev \
+            zlib1g-dev \
+            ${{ matrix.cc }} \
+            ${{ matrix.cxx }}
+
+      - name: Print toolchain versions
+        run: |
+          $CC --version
+          $CXX --version
+          cmake --version
+          ninja --version
+          pkg-config --modversion liburing
+          pkg-config --modversion openssl
+
+      - name: Configure
+        run: |
+          cmake -G Ninja -B build \
+            -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+            -DSIGNET_BUILD_TESTS=ON \
+            -DSIGNET_BUILD_EXAMPLES=ON
+
+      - name: Build
+        run: ninja -C build
+
+      - name: Test
+        run: ctest --test-dir build --output-on-failure --no-tests=error
+
+  warnings-as-errors:
+    name: -Werror sanity build
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build cmake pkg-config \
+            liburing-dev libssl-dev zlib1g-dev g++-11
+
+      - name: Configure with -Werror
+        env:
+          CC: gcc-11
+          CXX: g++-11
+          CXXFLAGS: -Werror
+        run: |
+          cmake -G Ninja -B build-werror \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DSIGNET_BUILD_TESTS=ON
+
+      - name: Build
+        run: ninja -C build-werror

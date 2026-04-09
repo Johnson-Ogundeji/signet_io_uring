@@ -1,0 +1,12 @@
+@PACKAGE_INIT@
+
+include(CMakeFindDependencyMacro)
+
+find_dependency(PkgConfig)
+pkg_check_modules(LIBURING REQUIRED liburing)
+
+find_dependency(OpenSSL 3.0)
+
+include("${CMAKE_CURRENT_LIST_DIR}/signet_io_uringTargets.cmake")
+
+check_required_components(signet_io_uring)

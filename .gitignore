@@ -1,0 +1,32 @@
+build/
+build-*/
+out/
+.cache/
+.vscode/
+.idea/
+*.user
+compile_commands.json
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+CMakeScripts/
+cmake_install.cmake
+install_manifest.txt
+Testing/
+CTestTestfile.cmake
+_deps/
+
+# Compiled binaries / objects
+*.o
+*.obj
+*.a
+*.so
+*.dylib
+*.dll
+*.exe
+
+# Editors / OS
+.DS_Store
+*.swp
+*~
