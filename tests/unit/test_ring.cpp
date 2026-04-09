@@ -85,14 +85,14 @@ TEST_F(RingTest, ProcessCompletions) {
     for (int i = 0; i < 5; ++i) {
         ring.prep_nop(reinterpret_cast<void*>(static_cast<uintptr_t>(i)));
     }
-    ring.submit();
+    (void)ring.submit();
 
     // Wait for at least one
-    ring.wait_cqe(1000);
+    (void)ring.wait_cqe(1000);
 
     // Process all
     int count = 0;
-    ring.process_completions([&count](int32_t result, void* user_data) {
+    ring.process_completions([&count](int32_t result, void* /*user_data*/) {
         EXPECT_EQ(result, 0);
         ++count;
     });
@@ -111,10 +111,10 @@ TEST_F(RingTest, PeekCqeNonBlocking) {
 
     // Submit NOP
     ring.prep_nop(nullptr);
-    ring.submit();
+    (void)ring.submit();
 
     // Wait then peek
-    ring.wait_cqe(1000);
+    (void)ring.wait_cqe(1000);
     cqe = ring.peek_cqe();
     EXPECT_NE(cqe, nullptr);
 
@@ -131,7 +131,7 @@ TEST_F(RingTest, TimeoutOperation) {
     ts.tv_nsec = 10'000'000;  // 10ms
 
     ring.prep_timeout(&ts, 0, reinterpret_cast<void*>(0x999));
-    ring.submit();
+    (void)ring.submit();
 
     auto result = ring.wait_cqe(1000);
     ASSERT_TRUE(result.has_value());
@@ -158,7 +158,7 @@ TEST_F(RingTest, ReadWriteWithEventfd) {
     std::memcpy(write_buf.data(), &write_val, 8);
 
     ring.prep_write(efd, write_buf, 0, reinterpret_cast<void*>(1));
-    ring.submit();
+    (void)ring.submit();
 
     auto result = ring.wait_cqe(1000);
     ASSERT_TRUE(result.has_value());
@@ -168,7 +168,7 @@ TEST_F(RingTest, ReadWriteWithEventfd) {
     // Read from eventfd
     std::array<std::byte, 8> read_buf{};
     ring.prep_read(efd, read_buf, 0, reinterpret_cast<void*>(2));
-    ring.submit();
+    (void)ring.submit();
 
     result = ring.wait_cqe(1000);
     ASSERT_TRUE(result.has_value());
@@ -194,12 +194,12 @@ TEST_F(RingTest, Statistics) {
     for (int i = 0; i < 3; ++i) {
         ring.prep_nop(nullptr);
     }
-    ring.submit();
+    (void)ring.submit();
 
     EXPECT_EQ(ring.total_submissions(), 3);
 
     // Process completions
-    ring.wait_cqe(1000);
+    (void)ring.wait_cqe(1000);
     ring.process_completions([](int32_t, void*) {});
 
     EXPECT_EQ(ring.total_completions(), 3);
@@ -224,7 +224,7 @@ TEST_F(RingTest, SqSpaceTracking) {
     EXPECT_EQ(ring.sq_ready(), 8u);
 
     // Submit clears ready
-    ring.submit();
+    (void)ring.submit();
     EXPECT_EQ(ring.sq_ready(), 0u);
 }
 

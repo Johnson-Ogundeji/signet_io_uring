@@ -94,7 +94,7 @@ struct KtlsCipherInfo {
 /// @param ssl SSL object (after successful handshake)
 /// @param enable_rx Enable receive offload (requires kernel >= 5.1)
 /// @return Success or error
-[[nodiscard]] inline Expected<void> enable_ktls(int fd, SSL* ssl, bool enable_rx = true) {
+[[nodiscard]] inline Expected<void> enable_ktls([[maybe_unused]] int fd, SSL* ssl, bool enable_rx = true) {
     (void)enable_rx;  // Currently we let OpenSSL handle RX offload
 
     if (!ssl) {

@@ -289,7 +289,7 @@ TEST(WsFrameParserTest, Reset) {
     std::span<const std::byte> data(reinterpret_cast<std::byte*>(frame.data()), frame.size());
 
     WsFrameParser parser;
-    parser.parse_header(data);
+    (void)parser.parse_header(data);
     parser.reset();
 
     EXPECT_EQ(parser.header().payload_length, 0);
@@ -725,7 +725,7 @@ TEST(WsHandshakeStateMachineTest, RemainingDataAfterHandshake) {
         "\x81\x05Hello";  // A WebSocket text frame
 
     handshake.request_sent();
-    handshake.feed({
+    (void)handshake.feed({
         reinterpret_cast<const std::byte*>(response.data()),
         response.size()
     });

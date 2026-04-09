@@ -300,7 +300,7 @@ TEST_F(SocketTest, LoopbackEchoTest) {
     SocketOptions opts;
     opts.non_blocking = false;
     opts.tcp_nodelay = true;
-    sock->apply_options(opts);
+    (void)sock->apply_options(opts);
 
     // Connect
     auto v4 = IPv4Address::loopback();

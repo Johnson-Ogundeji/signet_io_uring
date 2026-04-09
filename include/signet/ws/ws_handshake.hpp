@@ -22,10 +22,12 @@
 #include <array>
 #include <charconv>
 #include <cstring>
+#include <optional>
 #include <random>
 #include <string>
 #include <string_view>
 #include <unordered_map>
+#include <vector>
 
 namespace signet {
 
