@@ -354,7 +354,14 @@ public:
         ws_config.send_buffer_size = config_.send_buffer_size;
         ws_config.connect_timeout_ms = static_cast<uint32_t>(config_.connect_timeout.count());
         ws_config.handshake_timeout_ms = static_cast<uint32_t>(config_.handshake_timeout.count());
-        ws_config.allow_rsv_bits = config_.enable_compression;
+        // SECURITY (F-2, audit follow-up 2026-05-23): the permessage-deflate
+        // extension is NOT yet wired into the receive path — WsConnection never
+        // calls PermessageDeflate::process_incoming, so an RSV1-compressed frame
+        // would be delivered to the application as raw DEFLATE bytes (silent
+        // corruption). Until the ExtensionChain is routed through WsConnection
+        // (+ inbound frames through WsProtocolValidator), we must NOT accept RSV1
+        // frames. Force off regardless of config_.enable_compression.
+        ws_config.allow_rsv_bits = false;
 
         // Add extra headers
         for (const auto& [name, value] : config_.extra_headers) {
@@ -364,10 +371,14 @@ public:
         // Add subprotocols
         ws_config.handshake.subprotocols = config_.subprotocols;
 
-        // Add extensions if compression enabled
-        if (config_.enable_compression) {
-            ws_config.handshake.extensions.push_back("permessage-deflate");
-        }
+        // SECURITY (F-2, audit follow-up 2026-05-23): do NOT advertise
+        // permessage-deflate until the extension is actually wired into the
+        // receive path. Offering it makes a compliant server send RSV1 frames
+        // we cannot inflate. Re-enable this block (and allow_rsv_bits above)
+        // only once WsConnection routes frames through the ExtensionChain.
+        // if (config_.enable_compression) {
+        //     ws_config.handshake.extensions.push_back("permessage-deflate");
+        // }
 
         set_state(WsClientState::Handshaking);
 

@@ -13,6 +13,57 @@
 
 ---
 
+## Follow-up audit (2026-05-23) — reconciliation + new findings
+
+An independent re-audit (downstream consumer review) verified the codebase
+line-by-line. Two corrections + new findings:
+
+### Doc integrity: the issue-by-issue BODY below is STALE
+
+The per-issue body still labels issues #2–#11 "⚠️ UNFIXED", but **the code is
+fixed** — the summary table, changelog, and per-file table are the source of
+truth; the prose body was not updated when the fixes landed. Verified genuinely
+fixed in code: #2/#3 (frame_size/build_frame overflow guards present in
+`ws_frame.hpp`), #4 (Ring move zeroing), #5 (SQE-after-bounds in `prep_*_fixed`),
+#6 (NULL guards in prep_connect/prep_timeout), #7/#8/#40 (TLS host verify set
+pre-handshake + failure propagated), #11/#44/#45 (pool overflow/align/mlock),
+#12–#18 (zlib error codes + bomb bound), #31 (key cleanse). **Treat the body as
+historical; the tables are authoritative.**
+
+### New findings the original audit MISSED
+
+| ID | Sev | Status | Issue |
+|---|---|---|---|
+| **F-1** | CRITICAL | ✅ FIXED 2026-05-23 | Receive path did not enforce `max_frame_size` (`ws_connection.hpp::read_frame`) — a hostile peer could declare a huge `payload_length` and grow the receive vector to OOM. Guard added before the read loop. |
+| **F-2** | HIGH | ⚠️ MITIGATED 2026-05-23; full fix pending build | The hardened `WsProtocolValidator`/`WsFrameValidator` AND `permessage-deflate` were DEAD CODE — `WsConnection` used weaker inline checks; deflate was advertised + RSV1 accepted but never inflated → silent corruption. **Mitigation:** stopped advertising deflate + forced `allow_rsv_bits=false` (so RSV1 frames are rejected, not mis-delivered). **Full fix (route inbound frames through `WsProtocolValidator` + the `ExtensionChain`, then re-enable deflate) is tracked and must land with a Linux build + the 302-test run.** |
+| **F-3** | MED (HIGH server) | ✅ FIXED 2026-05-23 | `RAND_bytes` return ignored in `generate_websocket_key` → key from uninitialized stack on RNG failure. Now zero-inits + checks the return (fail-closed → empty key). |
+| **F-4** | LOW | OPEN | `setsockopt(TCP_ULP, ulp, sizeof(ulp))` uses pointer size not `strlen` (`ktls.hpp`) → wrong kTLS support probe on some kernels. |
+| **F-5** | INFO | OPEN (doc) | Raw `prep_connect`/`prep_*` keep a kernel pointer to caller buffers/sockaddr with no ownership tracking → UAF if the caller frees before the CQE. Lifetime contract needs documenting at the API. |
+| **F-6** | MED | ⚠️ DOCUMENTED 2026-05-23; fix pending build | `BufferPool` free-list is a Treiber stack with a plain atomic head (no tag/generation) → ABA under genuine MPMC → double-acquire / free-list corruption. SPSC contract documented at `acquire()`; the tagged-pointer hardening must land with the pool concurrency tests on a Linux build. |
+| **F-7** | INFO | OPEN | `WsHandshake::result_` defaults to `Success` (fragile gate default). |
+| **F-8** | MEDIUM | ✅ FIXED 2026-05-23 | `clock.hpp` used `__rdtscp` gated only on the COMPILE-time `SIGNET_HAS_RDTSC` (any `__x86_64__`) with no runtime CPUID guard. RDTSCP is absent on some x86_64 hosts (QEMU TCG, certain hypervisors) → `SIGILL` at runtime — reached via the hot paths, so the library would crash on those hosts regardless of `SIGNET_ENABLE_SIMD`. Replaced with `__rdtsc()` (baseline on all x86_64; equivalent here — the processor-id `aux` was discarded). |
+
+### Build + test verification (2026-05-23)
+
+All F-fixes verified on Linux (Ubuntu 24.04, GCC, liburing/OpenSSL/zlib, kernel
+6.8, x86_64): clean configure + build + link, and **`100% tests passed, 0 failed
+out of 301`** (`ctest`; the 2 disabled tests are SQPOLL + the live-HTTPS
+integration test). Note: the suite must be built with the F-8 fix on hosts
+lacking RDTSCP (e.g. CI runners under emulation) or it SIGILLs before F-8.
+
+### Production-readiness verdict (re-audit)
+
+- **Client:** ready after F-1 + F-2 (mitigated above) + F-3 (done). F-4/F-6/F-7
+  are non-blocking for SPSC client use.
+- **Server (0.2.0, untrusted browsers):** materially UNIMPLEMENTED — masking-role
+  enforcement, accept-side handshake, receive-size limits, and DoS/rate/
+  slow-loris controls are absent from the live path. Treat as not-yet-built.
+- **Cross-cutting:** routing every inbound frame through `WsProtocolValidator` +
+  the `ExtensionChain` (deleting the duplicate inline logic) closes the F-2 full
+  fix and most server-side gaps at once. Recommended before 0.2.0.
+
+---
+
 ## Executive Summary
 
 A comprehensive security audit of the Signet io_uring WebSocket library identified **47 issues** across 8 core components. The issues range from critical memory safety bugs to medium-severity design concerns.

@@ -417,6 +417,17 @@ inline BufferHandle BufferPool::acquire() noexcept {
 
     total_acquires_.fetch_add(1, std::memory_order_relaxed);
 
+    // CONCURRENCY CONTRACT (F-6, audit follow-up 2026-05-23): this Treiber-stack
+    // pop/push pair is correct ONLY under single-producer/single-consumer use.
+    // `free_head_` carries no tag/generation, so under genuine multi-producer /
+    // multi-consumer access it has a classic ABA hazard: a stalled acquire can
+    // read head=X with next=N, X is acquired+released with a different next, and
+    // the CAS still succeeds on X — installing a stale `next`, double-handing-out
+    // a buffer or corrupting the free list. Do NOT share one BufferPool across
+    // threads without external synchronisation. Hardening to true MPMC (a tagged
+    // 64-bit head = generation<<32 | index) is tracked in docs/SECURITY_AUDIT.md
+    // (F-6) and must land WITH the pool concurrency tests on a Linux build.
+
     // Lock-free pop from stack
     int64_t head = free_head_.load(std::memory_order_acquire);
 

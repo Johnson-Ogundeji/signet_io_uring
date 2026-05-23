@@ -35,9 +35,15 @@ public:
     /// Read current timestamp in cycles (x86_64) or nanoseconds (other)
     [[nodiscard]] static inline uint64_t now() noexcept {
 #if SIGNET_HAS_RDTSC
-        // Use rdtscp for serializing read with processor ID
-        unsigned int aux;
-        return __rdtscp(&aux);
+        // PORTABILITY (F-8, audit follow-up 2026-05-23): RDTSCP requires the
+        // RDTSCP CPUID feature bit and is NOT present on every x86_64 host —
+        // notably QEMU TCG + some hypervisors — where __rdtscp raises SIGILL.
+        // SIGNET_HAS_RDTSC is derived purely from the COMPILE-time arch macro
+        // with no runtime guard, so a binary built here crashes there. RDTSC is
+        // baseline on all x86_64 and is equivalent for a timestamp (the
+        // processor-id `aux` was read then discarded); ordering is provided by
+        // the lfence/mfence in now_fenced().
+        return __rdtsc();
 #else
         return static_cast<uint64_t>(
             std::chrono::steady_clock::now().time_since_epoch().count());
