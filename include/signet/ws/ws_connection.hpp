@@ -473,6 +473,19 @@ private:
 
         const auto& header = frame_parser_.header();
 
+        // SECURITY (F-1, audit follow-up 2026-05-23): enforce max_frame_size on
+        // the RECEIVE path. The send path already checks it (send_frame), but
+        // without this guard a malicious / compromised server can declare a huge
+        // payload_length and dribble bytes, growing `buffer` without bound until
+        // OOM (memory-exhaustion DoS). Rejecting here also forecloses the
+        // size_t overflow of `payload_start + payload_length` below, since a
+        // bounded payload_length (≤ max_frame_size) plus the small header can
+        // never wrap.
+        if (header.payload_length > config_.max_frame_size) {
+            return unexpected(ErrorCode::FrameTooLarge,
+                "Incoming frame payload_length exceeds max_frame_size");
+        }
+
         // Read payload
         size_t payload_start = header.header_size;
         size_t total_needed = payload_start + header.payload_length;

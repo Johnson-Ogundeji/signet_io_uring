@@ -41,8 +41,14 @@ namespace signet {
 /// Uses OpenSSL's RAND_bytes for robust cross-platform randomness
 [[nodiscard]] inline std::string generate_websocket_key() {
     // Generate 16 random bytes using OpenSSL (robust across all platforms)
-    std::array<uint8_t, 16> random_bytes;
-    RAND_bytes(random_bytes.data(), static_cast<int>(random_bytes.size()));
+    std::array<uint8_t, 16> random_bytes{};  // zero-init: never read uninitialized
+    // SECURITY (F-3, audit follow-up 2026-05-23): check the RAND_bytes return.
+    // On RNG failure (engine error / not seeded) it returns <= 0 and leaves the
+    // buffer untouched; building the key from uninitialized/zero memory is UB +
+    // a weak nonce. Fail closed with an empty key — callers treat "" as an error.
+    if (RAND_bytes(random_bytes.data(), static_cast<int>(random_bytes.size())) != 1) {
+        return std::string{};
+    }
 
     // Base64 encode: 16 bytes = 5 full triplets (15 bytes) + 1 remaining byte
     // Output: 5*4 + 2 chars + 2 padding = 24 chars
